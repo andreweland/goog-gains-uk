@@ -1,3 +1,4 @@
+import argparse
 import csv
 import datetime
 import re
@@ -214,5 +215,35 @@ def tax_year(d):
     else:
         return "%d-%d" % (d.year - 1, d.year)
 
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--releases", default="Releases Report.csv")
+    parser.add_argument("--withdrawals", default="Withdrawals Report.csv")
+    parser.add_argument("--verbose", default=False)
+    args = parser.parse_args()
+    transactions, errors = parse_morgan_stanley(open(args.releases), open(args.withdrawals))
+    if errors:
+        for error in errors:
+            print(error)
+        return
+    gains = calculate_gains(transactions)
+    grouped = group_gains(gains)
+    template = "{:<15} {:>15} {:>15}"
+    print("# Summary")
+    print(template.format("Tax year", "Proceeds", "Gain"))
+    for (ty, proceeds, gain) in grouped:
+        print(template.format(ty, str(proceeds), str(gain)))
+    print()
+    print("# Transactions")
+    template = "{:<10} {:<15} {:<15} {:>15} {:>15}"
+    print(template.format("Date", "Plan", "Transaction", "Price", "Quantity"))
+    for t in transactions:
+        print(template.format(str(t.date), t.plan, t.type, str(t.price), t.quantity))
+        if args.verbose:
+            for l in t.log:
+                print("{:<10} {}".format("", l))
+
+if __name__ == "__main__":
+    main()
 
 
